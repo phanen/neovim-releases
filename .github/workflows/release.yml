@@ -9,6 +9,7 @@ on:
         required: false
         default: nightly
   push:
+    branches: "*"
     tags:
       - v[0-9]+.[0-9]+.[0-9]+
 
@@ -65,25 +66,35 @@ jobs:
         run: |
           echo 'CMAKE_BUILD_TYPE=Release' >> $GITHUB_ENV
           echo 'APPIMAGE_TAG=latest' >> $GITHUB_ENV
+          echo 'PREFER_LUA=on' >> $GITHUB_ENV
 
       - if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag_name == 'nightly')
         run: |
           echo 'CMAKE_BUILD_TYPE=RelWithDebInfo' >> $GITHUB_ENV
           echo 'APPIMAGE_TAG=nightly' >> $GITHUB_ENV
+          echo 'PREFER_LUA=on' >> $GITHUB_ENV
 
-      - name: appimage
-        env:
-          CC: zigcc
-        run: ./scripts/genappimage.sh ${APPIMAGE_TAG}
-      - run: cpack --config build/CPackConfig.cmake
+      # - name: appimage
+      #   env:
+      #     CC: zigcc
+      #   run: ./scripts/genappimage.sh ${APPIMAGE_TAG}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: appimage
-          path: |
-            build/bin/nvim-linux-x86_64.appimage
-            build/bin/nvim-linux-x86_64.appimage.zsync
-          retention-days: 1
+      # - run: cpack --config build/CPackConfig.cmake
+      - name: puc
+        run: |
+          cmake -S cmake.deps -B .deps -G Ninja -D USE_BUNDLED_LUA=ON
+          cmake --build .deps
+          cmake -B build -G Ninja -D PREFER_LUA=ON
+          cmake --build build
+          cpack --config build/CPackConfig.cmake
+
+      # - uses: actions/upload-artifact@v4
+      #   with:
+      #     name: appimage
+      #     path: |
+      #       build/bin/nvim-linux-x86_64.appimage
+      #       build/bin/nvim-linux-x86_64.appimage.zsync
+      #     retention-days: 1
 
       - uses: actions/upload-artifact@v4
         with:
@@ -152,7 +163,7 @@ jobs:
               --notes-file "$RUNNER_TEMP/notes.md" \
               --title "$SUBJECT" \
               --target $GITHUB_SHA \
-              nvim-linux64/* appimage/*
+              nvim-linux64/*
           fi
 
           gh release delete $TAG_NAME --yes || true
@@ -160,4 +171,4 @@ jobs:
               --notes-file "$RUNNER_TEMP/notes.md" \
               --title "$SUBJECT" \
               --target $GITHUB_SHA \
-              nvim-linux64/* appimage/*
+              nvim-linux64/*
