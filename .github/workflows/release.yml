@@ -96,6 +96,11 @@ jobs:
       #       build/bin/nvim-linux-x86_64.appimage.zsync
       #     retention-days: 1
 
+      - name: Validate build outputs
+        run: |
+          test -f build/nvim-linux-x86_64.tar.gz || { echo "ERROR: build/nvim-linux-x86_64.tar.gz not found"; exit 1; }
+          test -f build/nvim-linux-x86_64.deb || { echo "ERROR: build/nvim-linux-x86_64.deb not found"; exit 1; }
+
       - uses: actions/upload-artifact@v5
         with:
           name: nvim-linux64
@@ -155,7 +160,9 @@ jobs:
           envsubst < "$GITHUB_WORKSPACE/.github/workflows/notes.md" > "$RUNNER_TEMP/notes.md"
 
           if [ "$TAG_NAME" == "nightly" ]; then
-            git push origin :nightly || true
+            if git ls-remote --tags origin nightly | grep -q nightly; then
+              git push origin :nightly || true
+            fi
           else
             gh release delete stable --yes || true
             git push origin :stable || true
