@@ -127,6 +127,7 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           name: nvim-linux64
+          path: nvim-linux64
 
       - name: List artifact files
         run: ls -lhR nvim-linux64 || true
