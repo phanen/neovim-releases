@@ -128,9 +128,16 @@ jobs:
         run: |
           mkdir -p version
           tar -xzf nvim-linux-x86_64/nvim-linux-x86_64.tar.gz -C version
-          printf 'NVIM_VERSION<<END\n' >> $GITHUB_ENV
-          ./version/nvim-linux-x86_64/bin/nvim --version | head -n 3 >> $GITHUB_ENV
-          printf 'END\n' >> $GITHUB_ENV
+          {
+            echo "NVIM_VERSION=$(./version/nvim-linux-x86_64/bin/nvim --version | head -n 1 | awk '{print $2}')"
+            echo "LUAJIT_VERSION=$(./version/nvim-linux-x86_64/bin/nvim --version | sed -n '3p' | awk '{print $NF}')"
+          } >> "$GITHUB_ENV"
+          if [ -f nvim-linux-x86_64-puc/nvim-linux-x86_64-puc.tar.gz ]; then
+            tar -xzf nvim-linux-x86_64-puc/nvim-linux-x86_64-puc.tar.gz -C version
+            echo "LUA_VERSION=$(./version/nvim-linux-x86_64-puc/bin/nvim --version | sed -n '3p' | awk '{print $NF}')" >> "$GITHUB_ENV"
+          else
+            echo 'LUA_VERSION=5.1' >> "$GITHUB_ENV"
+          fi
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y gettext-base
@@ -157,7 +164,7 @@ jobs:
             SUBJECT='Nvim release build'
             PRERELEASE=
           fi
-          envsubst < "$GITHUB_WORKSPACE/.github/workflows/notes.md" > "$RUNNER_TEMP/notes.md"
+          envsubst '${NVIM_VERSION} ${LUAJIT_VERSION} ${LUA_VERSION}' < "$GITHUB_WORKSPACE/.github/workflows/notes.md" > "$RUNNER_TEMP/notes.md"
 
           if [ "$TAG_NAME" == "nightly" ]; then
             git push origin :nightly || true
